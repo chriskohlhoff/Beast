@@ -9,7 +9,10 @@
 #define BEAST_DETAIL_CPU_INFO_HPP
 
 #ifndef BEAST_NO_INTRINSICS
-# if defined(__GNUC__) || defined(_MSC_VER)
+# if defined(_MSC_VER) || \
+    (defined(__i386__) && defined(__PIC__) && \
+     defined(__GNUC__) && ! defined(__clang__)) || \
+    defined(__i386__)
 #  define BEAST_NO_INTRINSICS 0
 # else
 #  define BEAST_NO_INTRINSICS 1

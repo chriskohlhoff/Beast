@@ -71,6 +71,7 @@ protected:
     basic_parser_base()
         : sse42_(beast::detail::get_cpu_info().sse42)
     {
+        #error die
     }
 #endif
 
@@ -690,7 +691,7 @@ protected:
             "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 
         // name
-        static const char BOOST_ALIGNMENT(16) ranges1[] =
+        BOOST_ALIGNMENT(16) static const char ranges1[] =
             "\x00 "  /* control chars and up to SP */
             "\"\""   /* 0x22 */
             "()"     /* 0x28,0x29 */
