@@ -71,7 +71,6 @@ protected:
     basic_parser_base()
         : sse42_(beast::detail::get_cpu_info().sse42)
     {
-        #error die
     }
 #endif
 
