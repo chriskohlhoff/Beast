@@ -65,6 +65,15 @@ namespace detail {
 class basic_parser_base
 {
 protected:
+#if ! BEAST_NO_INTRINSICS
+    bool sse42_;
+
+    basic_parser_base()
+        : sse42_(beast::detail::get_cpu_info().sse42)
+    {
+    }
+#endif
+
     // limit on the size of the obs-fold buffer
     //
     // https://stackoverflow.com/questions/686217/maximum-on-http-header-values
@@ -197,7 +206,6 @@ protected:
 
     //--------------------------------------------------------------------------
 
-    static
     std::pair<char const*, bool>
     find_fast(
         char const* buf,
@@ -206,29 +214,35 @@ protected:
         size_t ranges_size)
     {
         bool found = false;
+
     #if ! BEAST_NO_INTRINSICS
-        if(BOOST_LIKELY(buf_end - buf >= 16))
+        if(BOOST_LIKELY(sse42_))
         {
-            __m128i ranges16 = _mm_loadu_si128((__m128i const*)ranges);
-            std::size_t left = (buf_end - buf) & ~15;
-            do
+            if(BOOST_LIKELY(buf_end - buf >= 16))
             {
-                __m128i b16 = _mm_loadu_si128((__m128i const*)buf);
-                int r = _mm_cmpestri(ranges16, ranges_size, b16, 16,
-                    _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES | _SIDD_UBYTE_OPS);
-                if(BOOST_UNLIKELY(r != 16))
+                __m128i ranges16 = _mm_loadu_si128((__m128i const*)ranges);
+                std::size_t left = (buf_end - buf) & ~15;
+                do
                 {
-                    buf += r;
-                    found = true;
-                    break;
+                    __m128i b16 = _mm_loadu_si128((__m128i const*)buf);
+                    int r = _mm_cmpestri(ranges16, ranges_size, b16, 16,
+                        _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES | _SIDD_UBYTE_OPS);
+                    if(BOOST_UNLIKELY(r != 16))
+                    {
+                        buf += r;
+                        found = true;
+                        break;
+                    }
+                    buf += 16;
+                    left -= 16;
                 }
-                buf += 16;
-                left -= 16;
+                while(BOOST_LIKELY(left != 0));
             }
-            while(BOOST_LIKELY(left != 0));
         }
+
     #else
         boost::ignore_unused(buf_end, ranges, ranges_size);
+    
     #endif
         return {buf, found};
     }
@@ -305,7 +319,6 @@ protected:
 
     //--------------------------------------------------------------------------
 
-    static
     char const*
     parse_token_to_eol(
         char const* p,
@@ -618,7 +631,6 @@ protected:
         }
     }
     
-    static
     void
     parse_reason(
         char const*& it, char const* last,
@@ -640,7 +652,6 @@ protected:
     }
 
     template<std::size_t N>
-    static
     void
     parse_field(
         char const*& p,
@@ -679,7 +690,7 @@ protected:
             "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 
         // name
-        static char const BOOST_ALIGNMENT(16) ranges1[] =
+        static const char BOOST_ALIGNMENT(16) ranges1[] =
             "\x00 "  /* control chars and up to SP */
             "\"\""   /* 0x22 */
             "()"     /* 0x28,0x29 */
