@@ -10,6 +10,7 @@
 
 #include <beast/core/static_string.hpp>
 #include <beast/core/string.hpp>
+#include <beast/core/detail/intrinsic.hpp>
 #include <beast/http/error.hpp>
 #include <beast/http/detail/rfc7230.hpp>
 #include <boost/config.hpp>
@@ -49,7 +50,6 @@
  * IN THE SOFTWARE.
  */
 
-#define BEAST_NO_INTRINSICS 1
 #if ! BEAST_NO_INTRINSICS
 # ifdef BOOST_MSVC
 #  include <nmmintrin.h>
