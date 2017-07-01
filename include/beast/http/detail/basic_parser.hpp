@@ -10,7 +10,7 @@
 
 #include <beast/core/static_string.hpp>
 #include <beast/core/string.hpp>
-#include <beast/core/detail/intrinsic.hpp>
+#include <beast/core/detail/cpu_info.hpp>
 #include <beast/http/error.hpp>
 #include <beast/http/detail/rfc7230.hpp>
 #include <boost/config.hpp>
