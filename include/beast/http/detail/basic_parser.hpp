@@ -49,6 +49,7 @@
  * IN THE SOFTWARE.
  */
 
+#define BEAST_NO_INTRINSICS 1
 #if ! BEAST_NO_INTRINSICS
 # ifdef BOOST_MSVC
 #  include <nmmintrin.h>
@@ -254,7 +255,7 @@ protected:
             while(BOOST_LIKELY(left != 0));
         }
     #else
-        boost::ignore_unused(buf_end, ranges, size);
+        boost::ignore_unused(buf_end, ranges, ranges_size);
     #endif
         return {buf, found};
     }
@@ -354,30 +355,30 @@ protected:
         /* find non-printable char within the next 8 bytes, this is the hottest code; manually inlined */
         while(BOOST_LIKELY(last - p >= 8))
         {
-        #define DOIT()                            \
-            do                                    \
-            {                                     \
-                if(BOOST_UNLIKELY(                \
-                        !IS_PRINTABLE_ASCII(*p))) \
-                    goto non_printable;           \
-                ++p;                              \
-            }                                     \
+        #define BEAST_PARSE_TOKEN_TO_EOL_REPEAT()   \
+            do                                      \
+            {                                       \
+                if(BOOST_UNLIKELY(                  \
+                        ! is_print(*p)))            \
+                    goto non_printable;             \
+                ++p;                                \
+            }                                       \
             while(0);
-                DOIT();
-                DOIT();
-                DOIT();
-                DOIT();
-                DOIT();
-                DOIT();
-                DOIT();
-                DOIT();
-        #undef DOIT
+                BEAST_PARSE_TOKEN_TO_EOL_REPEAT();
+                BEAST_PARSE_TOKEN_TO_EOL_REPEAT();
+                BEAST_PARSE_TOKEN_TO_EOL_REPEAT();
+                BEAST_PARSE_TOKEN_TO_EOL_REPEAT();
+                BEAST_PARSE_TOKEN_TO_EOL_REPEAT();
+                BEAST_PARSE_TOKEN_TO_EOL_REPEAT();
+                BEAST_PARSE_TOKEN_TO_EOL_REPEAT();
+                BEAST_PARSE_TOKEN_TO_EOL_REPEAT();
+        #undef BEAST_PARSE_TOKEN_TO_EOL_REPEAT
             continue;
         non_printable:
             if((BOOST_LIKELY((unsigned char)*p < '\040') &&
                 BOOST_LIKELY(*p != '\011')) ||
                 BOOST_UNLIKELY(*p == '\177'))
-                goto FOUND_CTL;
+                goto found_control;
             ++p;
         }
     #endif
