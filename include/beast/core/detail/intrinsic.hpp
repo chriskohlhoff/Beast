@@ -17,7 +17,9 @@
 #endif
 
 #if ! BEAST_NO_INTRINSICS
-# include <intrin.h> // __cpuid
+# if defined(_MSC_VER)
+#  include <intrin.h> // __cpuid
+# endif
 #endif
 
 namespace beast {

@@ -117,33 +117,6 @@ protected:
     static
     inline
     bool
-    is_text(char c)
-    {
-        // VCHAR / SP / HT / obs-text
-        static bool constexpr tab[256] = {
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, //   0
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //  16
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //  32
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //  48
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //  64
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //  80
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //  96
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, // 112
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 128
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 144
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 160
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 176
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 192
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 208
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 224
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1  // 240
-        };
-        return tab[static_cast<unsigned char>(c)];
-    }
-
-    static
-    inline
-    bool
     unhex(unsigned char& d, char c)
     {
         static signed char constexpr tab[256] = {
@@ -652,21 +625,6 @@ protected:
         string_view& result, error_code& ec)
     {
         auto const first = it;
-#if 0
-        for(;;)
-        {
-            if(it + 1 >= last)
-                break;
-            if(*it == '\r')
-                break;
-            if(! is_text(*it++))
-            {
-                ec = error::bad_reason;
-                return;
-            }
-        }
-        result = make_string(first, it);
-#else
         char const* token_last;
         auto p = parse_token_to_eol(
             it, last, token_last, ec);
@@ -679,7 +637,6 @@ protected:
         }
         result = make_string(first, token_last);
         it = p;
-#endif
     }
 
     template<std::size_t N>

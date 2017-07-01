@@ -844,16 +844,6 @@ do_field(field f,
         return;
     }
 
-    for(auto p = value.begin();
-        p != value.end(); ++p)
-    {
-        if(! is_text(*p))
-        {
-            ec = error::bad_value;
-            return;
-        }
-    }
-
     // Content-Length
     if(f == field::content_length)
     {
