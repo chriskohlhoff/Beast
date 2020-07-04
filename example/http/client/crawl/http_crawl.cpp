@@ -22,6 +22,7 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/post.hpp>
+#include <boost/asio/static_thread_pool.hpp>
 #include <boost/asio/strand.hpp>
 #include <atomic>
 #include <chrono>
@@ -46,17 +47,14 @@ using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 // This structure aggregates statistics on all the sites
 class crawl_report
 {
-    net::io_context& ioc_;
-    net::strand<
-        net::io_context::executor_type> strand_;
+    net::strand<net::any_io_executor> strand_;
     std::atomic<std::size_t> index_;
     std::vector<char const*> const& hosts_;
     std::size_t count_ = 0;
 
 public:
-    crawl_report(net::io_context& ioc)
-        : ioc_(ioc)
-        , strand_(ioc_.get_executor())
+    crawl_report(net::any_io_executor ex)
+        : strand_(ex)
         , index_(0)
         , hosts_(urls_large_data())
     {
@@ -347,22 +345,16 @@ int main(int argc, char* argv[])
         std::cerr <<
             "Usage: http-crawl <threads>\n" <<
             "Example:\n" <<
-            "    http-crawl 100 1\n";
+            "    http-crawl 100\n";
         return EXIT_FAILURE;
     }
     auto const threads = std::max<int>(1, std::atoi(argv[1]));
 
-    // The io_context is required for all I/O
-    net::io_context ioc;
-
-    // The work keeps io_context::run from returning
-    auto work = net::any_io_executor(
-        net::prefer(
-            ioc.get_executor(),
-            net::execution::outstanding_work.tracked));
+    // The thread pool is used to aggregate the statistics
+    net::static_thread_pool report_pool(1);
 
     // The report holds the aggregated statistics
-    crawl_report report{ioc};
+    crawl_report report{report_pool.executor()};
 
     timer t;
 
@@ -382,27 +374,16 @@ int main(int argc, char* argv[])
             ioc.run();
         });
 
-    // Add another thread to run the main io_context which
-    // is used to aggregate the statistics
-    workers.emplace_back(
-    [&ioc]
-    {
-        ioc.run();
-    });
-
-    // Now block until all threads exit
+    // Now block until all worker threads exit
     for(std::size_t i = 0; i < workers.size(); ++i)
     {
-        auto& thread = workers[i];
-
-        // If this is the last thread, reset the
-        // work object so that it can return from run.
-        if(i == workers.size() - 1)
-            work = {};
-
-        // Wait for the thread to exit
-        thread.join();
+        workers[i].join();
     }
+
+    // Once all workers have exited, we know that all aggregation tasks
+    // have been submitted to the thread pool, and no further jobs will
+    // be submitted. We now wait for the report aggregation to complete.
+    report_pool.wait();
 
     std::cout <<
         "Elapsed time:    " << chrono::duration_cast<chrono::seconds>(t.elapsed()).count() << " seconds\n";
