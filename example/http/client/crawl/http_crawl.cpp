@@ -347,19 +347,13 @@ int main(int argc, char* argv[])
         std::cerr <<
             "Usage: http-crawl <threads>\n" <<
             "Example:\n" <<
-            "    http-crawl 100 1\n";
+            "    http-crawl 100\n";
         return EXIT_FAILURE;
     }
     auto const threads = std::max<int>(1, std::atoi(argv[1]));
 
-    // The io_context is required for all I/O
+    // The io_context is used to aggregate the statistics
     net::io_context ioc;
-
-    // The work keeps io_context::run from returning
-    auto work = net::any_io_executor(
-        net::prefer(
-            ioc.get_executor(),
-            net::execution::outstanding_work.tracked));
 
     // The report holds the aggregated statistics
     crawl_report report{ioc};
@@ -371,7 +365,17 @@ int main(int argc, char* argv[])
     workers.reserve(threads + 1);
     for(int i = 0; i < threads; ++i)
         workers.emplace_back(
-        [&report]
+        [
+            &report,
+
+            // Each worker will eventually add some data to the aggregated
+            // report. Outstanding work is tracked in each worker to
+            // represent the forthcoming delivery of this data by that
+            // worker.
+            reporting_work = net::require(
+                ioc.get_executor(),
+                net::execution::outstanding_work.tracked)
+        ]
         {
             // We use a separate io_context for each worker because
             // the asio resolver simulates asynchronous operation using
@@ -393,15 +397,7 @@ int main(int argc, char* argv[])
     // Now block until all threads exit
     for(std::size_t i = 0; i < workers.size(); ++i)
     {
-        auto& thread = workers[i];
-
-        // If this is the last thread, reset the
-        // work object so that it can return from run.
-        if(i == workers.size() - 1)
-            work = {};
-
-        // Wait for the thread to exit
-        thread.join();
+        workers[i].join();
     }
 
     std::cout <<
